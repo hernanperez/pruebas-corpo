@@ -4,60 +4,80 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Datos desde Google Sheets</title>
-  <link rel="stylesheet" href="style.css" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f4f6f9; color: #333; }
+    .container { max-width: 900px; margin: 40px auto; padding: 20px; }
+    h1 { text-align: center; margin-bottom: 20px; color: #1a73e8; }
+    table { width: 100%; border-collapse: collapse; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #eee; }
+    th { background: #1a73e8; color: white; text-transform: uppercase; font-size: 0.9em; }
+    tr:hover { background: #f8f9fa; }
+    .refresh { text-align: center; margin-top: 20px; font-size: 0.9em; color: #666; }
+    button { margin-left: 10px; padding: 6px 12px; background: #1a73e8; color: white; border: none; border-radius: 4px; cursor: pointer; }
+    button:hover { background: #1557b0; }
+  </style>
 </head>
 <body>
   <div class="container">
     <h1>Mis Datos desde Google Sheets</h1>
     <table id="tabla">
       <thead id="header"></thead>
-      <tbody id="body"></tbody>
+      <tbody id="body"><tr><td>Cargando datos...</td></tr></tbody>
     </table>
-    <p class="refresh">Última actualización: <span id="time"></span> 
+    <p class="refresh">Última actualización: <span id="time">--:--</span> 
       <button onclick="cargarDatos()">Actualizar</button>
     </p>
   </div>
 
- <script>
-  // Genera un nombre único para el callback
-  const callbackName = 'jsonp_callback_' + Math.round(100000 * Math.random());
-  window[callbackName] = function(data) {
-    renderTable(data.data || []);
-    delete window[callbackName]; // limpia
-  };
+  <script>
+    // ← REEMPLAZA ESTA URL CON TU URL ANÓNIMA
+    const API_URL = 'https://script.google.com/macros/s/AKfycbzHbzHNRrhfYNdvmDtxGl28A3yIIpHMMdvnDl8FSy1x1b6ARhIeHM_hmuf4FMMNpOYx/exec';
 
-  function cargarDatos() {
-    // Limpia script anterior
-    const oldScript = document.getElementById('jsonp');
-    if (oldScript) oldScript.remove();
+    function cargarDatos() {
+      // Limpia callback anterior
+      const oldScript = document.getElementById('jsonp-script');
+      if (oldScript) oldScript.remove();
 
-    const script = document.createElement('script');
-    script.id = 'jsonp';
-    script.src = `https://script.google.com/macros/s/AKfycbxhKnl3uy6CeN-dRWcBgtWYNGk4NlnHypzoBexyC80HkAAeDZzlAhowGTI1tw5NRwc/exec${callbackName}`;
-    document.body.appendChild(script);
+      // Genera callback único
+      const callbackName = 'jsonp_callback_' + Date.now();
+      window[callbackName] = function(response) {
+        renderTable(response.data || []);
+        document.getElementById('time').textContent = new Date().toLocaleTimeString();
+        delete window[callbackName];
+      };
 
-    document.getElementById('time').textContent = new Date().toLocaleTimeString();
-  }
-
-  function renderTable(data) {
-    if (data.length === 0) {
-      document.getElementById('body').innerHTML = '<tr><td>Sin datos</td></tr>';
-      return;
+      // Crea script
+      const script = document.createElement('script');
+      script.id = 'jsonp-script';
+      script.src = `${API_URL}?callback=${callbackName}`;
+      script.onerror = () => {
+        document.getElementById('body').innerHTML = '<tr><td>Error al cargar datos</td></tr>';
+      };
+      document.body.appendChild(script);
     }
 
-    const headers = Object.keys(data[0]);
-    document.getElementById('header').innerHTML = 
-      '<tr>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr>';
+    function renderTable(data) {
+      if (data.length === 0) {
+        document.getElementById('body').innerHTML = '<tr><td>Sin datos</td></tr>';
+        return;
+      }
 
-    document.getElementById('body').innerHTML = 
-      data.map(row => 
-        '<tr>' + headers.map(h => `<td>${row[h] || ''}</td>`).join('') + '</tr>'
-      ).join('');
-  }
+      const headers = Object.keys(data[0]);
+      document.getElementById('header').innerHTML = 
+        '<tr>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr>';
 
-  // Cargar al inicio
-  cargarDatos();
-  setInterval(cargarDatos, 30000);
-</script>
+      document.getElementById('body').innerHTML = 
+        data.map(row => 
+          '<tr>' + headers.map(h => `<td>${row[h] || ''}</td>`).join('') + '</tr>'
+        ).join('');
+    }
+
+    // Cargar al inicio
+    cargarDatos();
+
+    // Actualizar cada 30 segundos
+    setInterval(cargarDatos, 30000);
+  </script>
 </body>
 </html>
