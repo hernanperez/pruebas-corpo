@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Datos desde Google Sheets</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <h1>Mis Datos desde Google Sheets</h1>
+    <table id="tabla">
+      <thead id="header"></thead>
+      <tbody id="body"></tbody>
+    </table>
+    <p class="refresh">Última actualización: <span id="time"></span> 
+      <button onclick="cargarDatos()">Actualizar</button>
+    </p>
+  </div>
+
+ <script>
+  // Genera un nombre único para el callback
+  const callbackName = 'jsonp_callback_' + Math.round(100000 * Math.random());
+  window[callbackName] = function(data) {
+    renderTable(data.data || []);
+    delete window[callbackName]; // limpia
+  };
+
+  function cargarDatos() {
+    // Limpia script anterior
+    const oldScript = document.getElementById('jsonp');
+    if (oldScript) oldScript.remove();
+
+    const script = document.createElement('script');
+    script.id = 'jsonp';
+    script.src = `https://script.google.com/macros/s/AKfycbxhKnl3uy6CeN-dRWcBgtWYNGk4NlnHypzoBexyC80HkAAeDZzlAhowGTI1tw5NRwc/exec${callbackName}`;
+    document.body.appendChild(script);
+
+    document.getElementById('time').textContent = new Date().toLocaleTimeString();
+  }
+
+  function renderTable(data) {
+    if (data.length === 0) {
+      document.getElementById('body').innerHTML = '<tr><td>Sin datos</td></tr>';
+      return;
+    }
+
+    const headers = Object.keys(data[0]);
+    document.getElementById('header').innerHTML = 
+      '<tr>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr>';
+
+    document.getElementById('body').innerHTML = 
+      data.map(row => 
+        '<tr>' + headers.map(h => `<td>${row[h] || ''}</td>`).join('') + '</tr>'
+      ).join('');
+  }
+
+  // Cargar al inicio
+  cargarDatos();
+  setInterval(cargarDatos, 30000);
+</script>
+</body>
+</html>
